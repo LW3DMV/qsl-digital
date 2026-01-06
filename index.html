@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>QSL Log Digital – LW3DMV</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#0e1b2b;color:#1ed6ff;font-family:Arial;margin:0;padding:20px}
+input,button{padding:8px;margin:6px 0;width:100%}
+button{background:#1ed6ff;color:#0e1b2b;border:none;cursor:pointer;font-weight:bold}
+.card{background:#12263f;padding:15px;margin-bottom:20px;border-radius:8px}
+canvas{width:100%;max-width:950px;border:2px solid #1ed6ff;margin-top:10px}
+.qslBox{margin-bottom:30px}
+.hidden{display:none}
+h2,h3{text-align:center}
+#perfil{
+  background:#1a2f4d;
+  padding:10px;
+  border-radius:8px;
+  margin-bottom:20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN / REGISTRO -->
+<div id="loginBox" class="card">
+<h2>🔐 Login / Registro</h2>
+<input id="licLogin" placeholder="Licencia">
+<input id="passLogin" type="password" placeholder="Contraseña">
+<button onclick="login()">Entrar</button>
+<button onclick="register()">Registrar</button>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+<div id="perfil">
+  <span>👤 Usuario: <b id="userLic"></b></span>
+  <button onclick="logout()">🚪 Cerrar sesión</button>
+</div>
+
+<h2>📡 QSL LOG DIGITAL – LW3DMV</h2>
+<div id="utc"></div>
+
+<div class="card">
+<h3>Imagen de fondo QSL</h3>
+<input type="file" id="bg" accept="image/*">
+</div>
+
+<div class="card">
+<h3>Contacto manual</h3>
+<input id="op_call" placeholder="Licencia del operador">
+<input id="dx_call" placeholder="Licencia corresponsal">
+
+<!-- 👉 AGREGADO -->
+<input type="date" id="m_date">
+<input type="time" id="m_time">
+
+<input id="m_band" placeholder="Banda">
+<input id="m_mode" placeholder="Modo">
+<input id="m_rst_s" placeholder="RST enviado">
+<input id="m_rst_r" placeholder="RST recibido">
+<button onclick="addManual()">Agregar contacto</button>
+</div>
+
+<div class="card">
+<h3>Subir ADIF</h3>
+<input type="file" id="adif">
+</div>
+
+<div class="card">
+<button onclick="clearAll()">🗑 Borrar todas las QSL</button>
+</div>
+
+<div class="card">
+<h3>QSL Generadas</h3>
+<div id="list"></div>
+</div>
+
+</div>
+
+<script>
+/* LOGIN */
+function getUsers(){
+  return JSON.parse(localStorage.getItem("qslUsers")||"{}");
+}
+function register(){
+  const l=licLogin.value.trim(),p=passLogin.value.trim();
+  if(!l||!p) return alert("Completa los datos");
+  const u=getUsers();
+  if(u[l]) return alert("La licencia ya existe");
+  u[l]=p;
+  localStorage.setItem("qslUsers",JSON.stringify(u));
+  alert("Usuario registrado");
+}
+function login(){
+  const l=licLogin.value.trim(),p=passLogin.value.trim();
+  const u=getUsers();
+  if(u[l]!==p) return alert("Datos incorrectos");
+  localStorage.setItem("qslUser",l);
+  showApp();
+}
+function logout(){
+  localStorage.removeItem("qslUser");
+  location.reload();
+}
+function showApp(){
+  userLic.innerText=localStorage.getItem("qslUser");
+  loginBox.classList.add("hidden");
+  app.classList.remove("hidden");
+}
+if(localStorage.getItem("qslUser")) showApp();
+
+/* UTC */
+setInterval(()=>utc.innerText="UTC: "+new Date().toUTCString(),1000);
+
+/* QSL */
+let bgImg=null, qsls=[];
+bg.onchange=e=>{
+  const r=new FileReader();
+  r.onload=()=>bgImg=r.result;
+  r.readAsDataURL(e.target.files[0]);
+};
+
+function addManual(){
+  if(!bgImg) return alert("Subí la imagen QSL primero");
+  if(!m_date.value||!m_time.value) return alert("Fecha y hora obligatorias");
+  qsls.push({
+    op:op_call.value,
+    dx:dx_call.value,
+    date:m_date.value,
+    time:m_time.value,
+    band:m_band.value,
+    mode:m_mode.value,
+    rst_s:m_rst_s.value,
+    rst_r:m_rst_r.value
+  });
+  render();
+}
+
+adif.onchange=e=>{
+  if(!bgImg) return alert("Subí la imagen QSL primero");
+  const r=new FileReader();
+  r.onload=()=>parseADIF(r.result);
+  r.readAsText(e.target.files[0]);
+};
+
+function parseADIF(t){
+  t.split(/<eor>/i).forEach(r=>{
+    const g=f=>{
+      const m=r.match(new RegExp(`<${f}:\\d+>([^<]+)`,'i'));
+      return m?m[1].trim():"";
+    };
+    if(g("CALL")&&g("STATION_CALLSIGN")){
+      qsls.push({
+        op:g("STATION_CALLSIGN"),
+        dx:g("CALL"),
+        date:g("QSO_DATE"),
+        time:g("TIME_ON"),
+        band:g("BAND"),
+        mode:g("MODE"),
+        rst_s:g("RST_SENT"),
+        rst_r:g("RST_RCVD")
+      });
+    }
+  });
+  render();
+}
+
+function clearAll(){
+  if(confirm("Borrar todas las QSL?")){
+    qsls=[];
+    render();
+  }
+}
+
+function render(){
+  list.innerHTML="";
+  qsls.forEach(drawQSL);
+}
+
+function drawQSL(q){
+  const box=document.createElement("div");
+  box.className="qslBox";
+  const c=document.createElement("canvas");
+  c.width=950; c.height=550;
+  const x=c.getContext("2d");
+
+  const img=new Image();
+  img.onload=()=>{
+    x.drawImage(img,0,0,c.width,c.height);
+    const bx=c.width-380,by=c.height-190;
+    x.strokeStyle="#1ed6ff"; x.lineWidth=3;
+    x.strokeRect(bx,by,360,170);
+    x.fillStyle="#1ed6ff";
+    x.font="bold 16px Arial";
+    x.fillText("DE: "+q.op,bx+10,by+30);
+    x.fillText("PARA: "+q.dx,bx+10,by+55);
+    x.font="14px Arial";
+    x.fillText("Fecha: "+q.date+" Hora: "+q.time,bx+10,by+80);
+    x.fillText("Banda: "+q.band+" Modo: "+q.mode,bx+10,by+105);
+    x.fillText("RST S: "+q.rst_s+" RST R: "+q.rst_r,bx+10,by+130);
+    x.font="bold 14px Arial";
+    x.fillText("73, saludos",bx+10,by+155);
+  };
+  img.src=bgImg;
+
+  const b=document.createElement("button");
+  b.innerText="⬇ Descargar PNG";
+  b.onclick=()=>{
+    const a=document.createElement("a");
+    a.href=c.toDataURL();
+    a.download=q.dx+".png";
+    a.click();
+  };
+
+  box.append(c,b);
+  list.appendChild(box);
+}
+</script>
+
+</body>
+</html>
