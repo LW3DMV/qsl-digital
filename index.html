@@ -4,15 +4,17 @@
 <meta charset="UTF-8">
 <title>QSL Log Digital – LW3DMV</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Fuente Great Maker -->
+<link href="https://fonts.googleapis.com/css2?family=Great+Maker&display=swap" rel="stylesheet">
 <style>
 body{background:#0e1b2b;color:#1ed6ff;font-family:Arial;margin:0;padding:20px}
 input,button{padding:8px;margin:6px 0;width:100%}
-button{background:#1ed6ff;color:#0e1b2b;border:none;cursor:pointer;font-weight:bold}
+button{background:#1ed6ff;color:#0e1b2b;border:none;cursor:pointer;font-weight:bold;font-family:'Great Maker', cursive}
 .card{background:#12263f;padding:15px;margin-bottom:20px;border-radius:8px}
-canvas{width:100%;max-width:950px;border:2px solid #1ed6ff;margin-top:10px}
+canvas{width:100%;max-width:950px;border:2px solid #1ed6ff;margin-top:10px} 
 .qslBox{margin-bottom:30px}
 .hidden{display:none}
-h2,h3{text-align:center}
+h2,h3{text-align:center;font-family:'Great Maker', cursive}
 #perfil{
   background:#1a2f4d;
   padding:10px;
@@ -22,10 +24,19 @@ h2,h3{text-align:center}
   justify-content:space-between;
   align-items:center;
 }
+#soporte{
+  text-align:center;
+  margin-bottom:15px;
+  font-family:'Great Maker', cursive;
+  color:#1ed6ff;
+}
 </style>
 </head>
 
 <body>
+
+<!-- SOPORTE -->
+<div id="soporte">📧 Soporte: <a href="mailto:lw3dmv@gmail.com" style="color:#1ed6ff;text-decoration:none;">lw3dmv@gmail.com</a></div>
 
 <!-- LOGIN / REGISTRO -->
 <div id="loginBox" class="card">
@@ -56,11 +67,8 @@ h2,h3{text-align:center}
 <h3>Contacto manual</h3>
 <input id="op_call" placeholder="Licencia del operador">
 <input id="dx_call" placeholder="Licencia corresponsal">
-
-<!-- 👉 AGREGADO -->
 <input type="date" id="m_date">
 <input type="time" id="m_time">
-
 <input id="m_band" placeholder="Banda">
 <input id="m_mode" placeholder="Modo">
 <input id="m_rst_s" placeholder="RST enviado">
@@ -86,9 +94,7 @@ h2,h3{text-align:center}
 
 <script>
 /* LOGIN */
-function getUsers(){
-  return JSON.parse(localStorage.getItem("qslUsers")||"{}");
-}
+function getUsers(){return JSON.parse(localStorage.getItem("qslUsers")||"{}");}
 function register(){
   const l=licLogin.value.trim(),p=passLogin.value.trim();
   if(!l||!p) return alert("Completa los datos");
@@ -187,37 +193,66 @@ function render(){
 function drawQSL(q){
   const box=document.createElement("div");
   box.className="qslBox";
+
+  // Canvas alta resolución
   const c=document.createElement("canvas");
-  c.width=950; c.height=550;
+  c.width=1900;
+  c.height=1100;
+  c.style.width="100%";
+  c.style.height="auto";
   const x=c.getContext("2d");
 
   const img=new Image();
   img.onload=()=>{
     x.drawImage(img,0,0,c.width,c.height);
-    const bx=c.width-380,by=c.height-190;
-    x.strokeStyle="#1ed6ff"; x.lineWidth=3;
-    x.strokeRect(bx,by,360,170);
+
+    const scale=2;
+    const bx=c.width-760, by=c.height-400;
+    const bw=380*scale, bh=180*scale;
+
+    // Fondo semi-transparente del cuadro de datos
+    x.fillStyle="rgba(22,43,68,0.85)";
+    x.fillRect(bx,by,bw,bh);
+
+    // Borde
+    x.strokeStyle="#1ed6ff";
+    x.lineWidth=6;
+    x.strokeRect(bx,by,bw,bh);
+
+    // Texto QSL
     x.fillStyle="#1ed6ff";
-    x.font="bold 16px Arial";
-    x.fillText("DE: "+q.op,bx+10,by+30);
-    x.fillText("PARA: "+q.dx,bx+10,by+55);
-    x.font="14px Arial";
-    x.fillText("Fecha: "+q.date+" Hora: "+q.time,bx+10,by+80);
-    x.fillText("Banda: "+q.band+" Modo: "+q.mode,bx+10,by+105);
-    x.fillText("RST S: "+q.rst_s+" RST R: "+q.rst_r,bx+10,by+130);
-    x.font="bold 14px Arial";
-    x.fillText("73, saludos",bx+10,by+155);
+    x.font="bold 40px 'Great Maker', cursive"; 
+    x.textBaseline="top";
+    x.fillText("DE: "+q.op,bx+20,by+20);
+    x.fillText("PARA: "+q.dx,bx+20,by+80);
+
+    x.font="32px 'Great Maker', cursive";
+    x.fillText("Fecha: "+q.date+" Hora: "+q.time,bx+20,by+140);
+    x.fillText("Banda: "+q.band+" Modo: "+q.mode,bx+20,by+200);
+    x.fillText("RST S: "+q.rst_s+" RST R: "+q.rst_r,bx+20,by+260);
+
+    x.font="bold 32px 'Great Maker', cursive";
+    x.fillText("73, saludos",bx+20,by+320);
+
+    // Anuncio / marca de la página (esquina izquierda)
+    const anuncio = "Generado con QSL Digital – LW3DMV";
+    x.font = "bold 24px 'Great Maker', cursive";
+    x.fillStyle = "rgba(30,214,255,0.5)";
+    x.fillText(anuncio, 20, c.height - 60);
+
+    // 🔹 Email de soporte en la QSL (esquina superior izquierda)
+    const soporte = "📧 lw3dmv@gmail.com";
+    x.font = "bold 28px 'Great Maker', cursive";
+    x.fillStyle = "rgba(30,214,255,0.7)";
+    x.fillText(soporte, 20, 20);
+
   };
   img.src=bgImg;
 
+  // Botón descargar
   const b=document.createElement("button");
   b.innerText="⬇ Descargar PNG";
-  b.onclick=()=>{
-    const a=document.createElement("a");
-    a.href=c.toDataURL();
-    a.download=q.dx+".png";
-    a.click();
-  };
+  b.onclick=()=>{const a=document.createElement("a"); a.href=c.toDataURL(); a.download=q.dx+".png"; a.click();};
 
   box.append(c,b);
   list.appendChild(box);
