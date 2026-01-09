@@ -4,41 +4,25 @@
 <meta charset="UTF-8">
 <title>QSL Log Digital – LW3DMV</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- Fuente Great Maker -->
 <link href="https://fonts.googleapis.com/css2?family=Great+Maker&display=swap" rel="stylesheet">
 <style>
 body{background:#0e1b2b;color:#1ed6ff;font-family:Arial;margin:0;padding:20px}
 input,button{padding:8px;margin:6px 0;width:100%}
 button{background:#1ed6ff;color:#0e1b2b;border:none;cursor:pointer;font-weight:bold;font-family:'Great Maker', cursive}
 .card{background:#12263f;padding:15px;margin-bottom:20px;border-radius:8px}
-canvas{width:100%;max-width:950px;border:2px solid #1ed6ff;margin-top:10px} 
+canvas{width:100%;max-width:950px;border:2px solid #1ed6ff;margin-top:10px}
 .qslBox{margin-bottom:30px}
 .hidden{display:none}
 h2,h3{text-align:center;font-family:'Great Maker', cursive}
-#perfil{
-  background:#1a2f4d;
-  padding:10px;
-  border-radius:8px;
-  margin-bottom:20px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-#soporte{
-  text-align:center;
-  margin-bottom:15px;
-  font-family:'Great Maker', cursive;
-  color:#1ed6ff;
-}
+#perfil{background:#1a2f4d;padding:10px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between}
+#soporte{text-align:center;margin-bottom:15px;font-family:'Great Maker', cursive}
 </style>
 </head>
 
 <body>
 
-<!-- SOPORTE -->
-<div id="soporte">📧 Soporte: <a href="mailto:lw3dmv@gmail.com" style="color:#1ed6ff;text-decoration:none;">lw3dmv@gmail.com</a></div>
+<div id="soporte">📧 Soporte: <a href="mailto:lw3dmv@gmail.com" style="color:#1ed6ff">lw3dmv@gmail.com</a></div>
 
-<!-- LOGIN / REGISTRO -->
 <div id="loginBox" class="card">
 <h2>🔐 Login / Registro</h2>
 <input id="licLogin" placeholder="Licencia">
@@ -47,12 +31,11 @@ h2,h3{text-align:center;font-family:'Great Maker', cursive}
 <button onclick="register()">Registrar</button>
 </div>
 
-<!-- APP -->
 <div id="app" class="hidden">
 
 <div id="perfil">
-  <span>👤 Usuario: <b id="userLic"></b></span>
-  <button onclick="logout()">🚪 Cerrar sesión</button>
+<span>👤 Usuario: <b id="userLic"></b></span>
+<button onclick="logout()">🚪 Cerrar sesión</button>
 </div>
 
 <h2>📡 QSL LOG DIGITAL – LW3DMV</h2>
@@ -64,8 +47,13 @@ h2,h3{text-align:center;font-family:'Great Maker', cursive}
 </div>
 
 <div class="card">
+<h3>Actividad / Evento (opcional)</h3>
+<input id="actividad" placeholder="Ej: Día del Radioaficionado">
+</div>
+
+<div class="card">
 <h3>Contacto manual</h3>
-<input id="op_call" placeholder="Licencia del operador">
+<input id="op_call" placeholder="Tu licencia">
 <input id="dx_call" placeholder="Licencia corresponsal">
 <input type="date" id="m_date">
 <input type="time" id="m_time">
@@ -78,11 +66,12 @@ h2,h3{text-align:center;font-family:'Great Maker', cursive}
 
 <div class="card">
 <h3>Subir ADIF</h3>
-<input type="file" id="adif">
+<input type="file" id="adif" accept=".adi,.adif">
 </div>
 
 <div class="card">
-<button onclick="clearAll()">🗑 Borrar todas las QSL</button>
+<button onclick="downloadAll()">⬇ Descargar TODAS las QSL</button>
+<button onclick="clearAll()">🗑 Borrar todas</button>
 </div>
 
 <div class="card">
@@ -93,39 +82,27 @@ h2,h3{text-align:center;font-family:'Great Maker', cursive}
 </div>
 
 <script>
-/* LOGIN */
 function getUsers(){return JSON.parse(localStorage.getItem("qslUsers")||"{}");}
 function register(){
-  const l=licLogin.value.trim(),p=passLogin.value.trim();
-  if(!l||!p) return alert("Completa los datos");
-  const u=getUsers();
-  if(u[l]) return alert("La licencia ya existe");
-  u[l]=p;
-  localStorage.setItem("qslUsers",JSON.stringify(u));
-  alert("Usuario registrado");
+  const l=licLogin.value,p=passLogin.value;
+  if(!l||!p) return alert("Datos incompletos");
+  const u=getUsers(); if(u[l]) return alert("Existe");
+  u[l]=p; localStorage.setItem("qslUsers",JSON.stringify(u));
 }
 function login(){
-  const l=licLogin.value.trim(),p=passLogin.value.trim();
   const u=getUsers();
-  if(u[l]!==p) return alert("Datos incorrectos");
-  localStorage.setItem("qslUser",l);
-  showApp();
+  if(u[licLogin.value]!==passLogin.value) return alert("Error");
+  localStorage.setItem("qslUser",licLogin.value); showApp();
 }
-function logout(){
-  localStorage.removeItem("qslUser");
-  location.reload();
-}
+function logout(){localStorage.removeItem("qslUser");location.reload();}
 function showApp(){
   userLic.innerText=localStorage.getItem("qslUser");
   loginBox.classList.add("hidden");
   app.classList.remove("hidden");
 }
 if(localStorage.getItem("qslUser")) showApp();
-
-/* UTC */
 setInterval(()=>utc.innerText="UTC: "+new Date().toUTCString(),1000);
 
-/* QSL */
 let bgImg=null, qsls=[];
 bg.onchange=e=>{
   const r=new FileReader();
@@ -134,23 +111,25 @@ bg.onchange=e=>{
 };
 
 function addManual(){
-  if(!bgImg) return alert("Subí la imagen QSL primero");
-  if(!m_date.value||!m_time.value) return alert("Fecha y hora obligatorias");
+  if(!bgImg) return alert("Subí la imagen QSL");
+  if(!dx_call.value) return alert("Falta corresponsal");
+
   qsls.push({
-    op:op_call.value,
-    dx:dx_call.value,
-    date:m_date.value,
-    time:m_time.value,
-    band:m_band.value,
-    mode:m_mode.value,
-    rst_s:m_rst_s.value,
-    rst_r:m_rst_r.value
+    actividad: actividad.value.trim(),
+    op: op_call.value || "",
+    dx: dx_call.value,
+    date: m_date.value,            // ← CON GUIONES
+    time: m_time.value,
+    band: m_band.value,
+    mode: m_mode.value,
+    rst_s: m_rst_s.value,
+    rst_r: m_rst_r.value
   });
   render();
 }
 
 adif.onchange=e=>{
-  if(!bgImg) return alert("Subí la imagen QSL primero");
+  if(!bgImg) return alert("Subí la imagen QSL");
   const r=new FileReader();
   r.onload=()=>parseADIF(r.result);
   r.readAsText(e.target.files[0]);
@@ -162,90 +141,81 @@ function parseADIF(t){
       const m=r.match(new RegExp(`<${f}:\\d+>([^<]+)`,'i'));
       return m?m[1].trim():"";
     };
-    if(g("CALL")&&g("STATION_CALLSIGN")){
+    if(g("CALL") && g("STATION_CALLSIGN")){
       qsls.push({
-        op:g("STATION_CALLSIGN"),
-        dx:g("CALL"),
-        date:g("QSO_DATE"),
-        time:g("TIME_ON"),
-        band:g("BAND"),
-        mode:g("MODE"),
-        rst_s:g("RST_SENT"),
-        rst_r:g("RST_RCVD")
+        actividad: actividad.value.trim(),
+        op: g("STATION_CALLSIGN"),
+        dx: g("CALL"),
+        date: g("QSO_DATE").replace(/(\d{4})(\d{2})(\d{2})/,"$1-$2-$3"), // ← CON GUIONES
+        time: g("TIME_ON").replace(/(..)(..)/,"$1:$2"),
+        band: g("BAND"),
+        mode: g("MODE"),
+        rst_s: g("RST_SENT"),
+        rst_r: g("RST_RCVD")
       });
     }
   });
   render();
 }
 
-function clearAll(){
-  if(confirm("Borrar todas las QSL?")){
-    qsls=[];
-    render();
-  }
+function clearAll(){qsls=[];render();}
+function render(){list.innerHTML="";qsls.forEach(drawQSL);}
+
+function fileName(q){
+  const act=q.actividad ? q.actividad.toUpperCase().replace(/[^A-Z0-9]/g,"_")+"_":"";
+  return act + q.dx.toUpperCase() + "_" + q.date + ".png";
 }
 
-function render(){
-  list.innerHTML="";
-  qsls.forEach(drawQSL);
+function downloadAll(){qsls.forEach(q=>createAndDownload(q));}
+
+function createAndDownload(q){
+  const c=document.createElement("canvas");
+  c.width=1900; c.height=1100;
+  const x=c.getContext("2d");
+  const img=new Image();
+  img.onload=()=>{
+    drawCanvas(x,c,q,img);
+    const a=document.createElement("a");
+    a.href=c.toDataURL("image/png");
+    a.download=fileName(q);
+    a.click();
+  };
+  img.src=bgImg;
+}
+
+function drawCanvas(x,c,q,img){
+  x.drawImage(img,0,0,c.width,c.height);
+  const bx=c.width-760, by=c.height-400;
+  x.fillStyle="rgba(22,43,68,0.85)";
+  x.fillRect(bx,by,760,360);
+  x.strokeStyle="#1ed6ff";
+  x.lineWidth=6;
+  x.strokeRect(bx,by,760,360);
+
+  x.fillStyle="#1ed6ff";
+  x.font="bold 40px 'Great Maker', cursive";
+  x.fillText("DE: "+q.op,bx+20,by+70);
+  x.fillText("PARA: "+q.dx,bx+20,by+130);
+
+  x.font="32px 'Great Maker', cursive";
+  x.fillText("Fecha: "+q.date+" Hora: "+q.time,bx+20,by+190);
+  x.fillText("Banda: "+q.band+" Modo: "+q.mode,bx+20,by+245);
+  x.fillText("RST S: "+q.rst_s+" RST R: "+q.rst_r,bx+20,by+300);
 }
 
 function drawQSL(q){
   const box=document.createElement("div");
   box.className="qslBox";
-
-  // Canvas alta resolución
   const c=document.createElement("canvas");
-  c.width=1900;
-  c.height=1100;
-  c.style.width="100%";
-  c.style.height="auto";
+  c.width=1900; c.height=1100;
   const x=c.getContext("2d");
-
   const img=new Image();
-  img.onload=()=>{
-    x.drawImage(img,0,0,c.width,c.height);
-
-    const scale=2;
-    const bx=c.width-760, by=c.height-400;
-    const bw=380*scale, bh=180*scale;
-
-    // Fondo semi-transparente del cuadro de datos
-    x.fillStyle="rgba(22,43,68,0.85)";
-    x.fillRect(bx,by,bw,bh);
-
-    // Borde
-    x.strokeStyle="#1ed6ff";
-    x.lineWidth=6;
-    x.strokeRect(bx,by,bw,bh);
-
-    // Texto QSL
-    x.fillStyle="#1ed6ff";
-    x.font="bold 40px 'Great Maker', cursive"; 
-    x.textBaseline="top";
-    x.fillText("DE: "+q.op,bx+20,by+20);
-    x.fillText("PARA: "+q.dx,bx+20,by+80);
-
-    x.font="32px 'Great Maker', cursive";
-    x.fillText("Fecha: "+q.date+" Hora: "+q.time,bx+20,by+140);
-    x.fillText("Banda: "+q.band+" Modo: "+q.mode,bx+20,by+200);
-    x.fillText("RST S: "+q.rst_s+" RST R: "+q.rst_r,bx+20,by+260);
-
-    x.font="bold 32px 'Great Maker', cursive";
-    x.fillText("73, saludos",bx+20,by+320);
-
-    // Anuncio / marca de la página (esquina izquierda)
-    const anuncio = "Generado con QSL Digital – LW3DMV";
-    x.font = "bold 24px 'Great Maker', cursive";
-    x.fillStyle = "rgba(30,214,255,0.5)";
-    x.fillText(anuncio, 20, c.height - 60);
-  };
+  img.onload=()=>drawCanvas(x,c,q,img);
   img.src=bgImg;
 
-  // Botón descargar
   const b=document.createElement("button");
   b.innerText="⬇ Descargar PNG";
-  b.onclick=()=>{const a=document.createElement("a"); a.href=c.toDataURL(); a.download=q.dx+".png"; a.click();};
+  b.onclick=()=>createAndDownload(q);
 
   box.append(c,b);
   list.appendChild(box);
@@ -254,4 +224,5 @@ function drawQSL(q){
 
 </body>
 </html>
+
 
